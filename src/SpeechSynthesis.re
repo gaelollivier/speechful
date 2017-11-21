@@ -4,6 +4,7 @@ module Voice = {
 
 module Utterance = {
   type t;
+  [@bs.new] external create : string => t = "SpeechSynthesisUtterance";
   [@bs.get] external get_lang : t => string = "lang";
   [@bs.set] external set_lang : (t, string) => unit = "lang";
   [@bs.get] external get_pitch : t => float = "pitch";
@@ -18,8 +19,12 @@ module Utterance = {
   [@bs.set] external set_volume : (t, float) => unit = "volume";
 };
 
-[@bs.scope "window.speechSynthesis"] [@bs.val] external getVoices : unit => list(Voice.t) = "";
+/* Methods on global `speechSynthesis` object */
+[@bs.scope "window.speechSynthesis"] [@bs.val] external getVoices : unit => array(Voice.t) = "";
 
+[@bs.scope "window.speechSynthesis"] [@bs.val] external speak : Utterance.t => unit = "";
+
+/* Setters */
 type t_globalSpeechSynthesis;
 
 [@bs.val] [@bs.scope "window"] external globalSpeechSynthesis : t_globalSpeechSynthesis =
