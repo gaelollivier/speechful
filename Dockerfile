@@ -1,10 +1,9 @@
-FROM node:9
+FROM node:7
 
-USER root
+RUN npm install -g bs-platform@2.1.0
 
-RUN mkdir /root/.npm-global \
-  && npm config set prefix '/root/.npm-global'
+ADD . /usr/local/src/app
 
-ENV PATH /root/.npm-global/bin:$PATH
+WORKDIR /usr/local/src/app
 
-RUN npm install -g bs-platform
+RUN npm install && npm run build
