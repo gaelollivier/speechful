@@ -1,0 +1,18 @@
+{
+  "name": "server",
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "bsb -clean-world",
+    "build": "bsb -make-world",
+    "start": "node lib/js/src/index.js",
+    "prepare": "npm link bs-platform"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "bs-platform": "^2.1.0"
+  },
+  "dependencies": {
+    "bs-express": "0.0.5"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "server",
+  "sources": ["src"],
+  "bs-dependencies": ["bs-express"],
+  "bsc-flags": ["-bs-super-errors"],
+  "refmt": 3
+}

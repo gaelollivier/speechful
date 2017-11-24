@@ -3,7 +3,16 @@ type t = {ws: WebSocket.t};
 type event =
   | MessageReceived(string);
 
-let serverUrl = "ws://localhost:8080";
+[@bs.scope "window.location"] [@bs.val] external locationHost : string = "host";
+
+[@bs.scope "window.location"] [@bs.val] external locationProtocol : string = "protocol";
+
+let buildRelativeURL = (path) => {
+  let protocol = locationProtocol == "http:" ? "ws://" : "wss://";
+  protocol ++ locationHost ++ path
+};
+
+let serverUrl = buildRelativeURL("/ws");
 
 let connect = (onConnect: t => unit, onEvent: event => unit) => {
   let ws = WebSocket.create_ws(serverUrl);

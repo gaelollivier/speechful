@@ -40,7 +40,7 @@ let make = (_children) => {
     <div className="App">
       (
         switch state.server {
-        | None => textEl("Loading...")
+        | None => textEl("Hello world !")
         | Some(_) => textEl("Connected !")
         }
       )
