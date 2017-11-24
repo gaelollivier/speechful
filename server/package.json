@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "scripts": {
     "clean": "bsb -clean-world",
-    "build": "bsb -make-world",
+    "build": "bsb -make-world && cp src/setupServer.js ./lib/js/src/",
     "start": "node lib/js/src/index.js",
     "prepare": "npm link bs-platform"
   },
@@ -13,6 +13,7 @@
     "bs-platform": "^2.1.0"
   },
   "dependencies": {
-    "bs-express": "0.0.5"
+    "express": "^4.16.2",
+    "express-ws": "^3.0.0"
   }
 }

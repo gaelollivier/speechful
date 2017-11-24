@@ -24,7 +24,9 @@ let make = (_children) => {
   },
   reducer: (action, _state) =>
     switch action {
-    | ConnectionOpened(server) => ReasonReact.Update({server: Some(server)})
+    | ConnectionOpened(server) =>
+      Server.sendMsg(server, "hello");
+      ReasonReact.Update({server: Some(server)})
     | MessageReceived(msg) =>
       ReasonReact.SideEffects(
         (
