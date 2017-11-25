@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const expressWs = require('express-ws');
+const ws = require('ws');
 
 const create_server = (port, onConnect) => {
   console.log(`Setting up server on ${port}...`);
@@ -10,13 +11,13 @@ const create_server = (port, onConnect) => {
 
   const webappPath = path.join(__dirname, '../../../../build');
 
-  // Server webapp
-  app.use('/', express.static(webappPath));
-
   // Setup ws server: forward new connections to ReasonML code
   app.ws('/ws', function(ws, req) {
     onConnect(ws);
   });
+
+  // Serve webapp
+  app.use('/', express.static(webappPath));
 
   // All unknown path -> index.html (for HTML5 routing)
   app.get('*', (req, res) => {

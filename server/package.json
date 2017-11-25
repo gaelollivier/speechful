@@ -4,6 +4,7 @@
   "scripts": {
     "clean": "bsb -clean-world",
     "build": "bsb -make-world && cp src/setupServer.js ./lib/js/src/",
+    "build:watch": "bsb -w -make-world",
     "start": "node lib/js/src/index.js",
     "prepare": "npm link bs-platform"
   },
