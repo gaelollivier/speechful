@@ -1,3 +1,4 @@
+# Build image
 FROM node:7
 
 WORKDIR /usr/local/src/app
@@ -16,6 +17,14 @@ ADD . /usr/local/src/app
 
 # Build webapp & server
 RUN npm run build && cd server && npm run build
+
+# Runtime, lightweight image
+FROM node:7-alpine
+
+WORKDIR /usr/local/src/app
+
+COPY --from=0 /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=0 /usr/local/src/app /usr/local/src/app
 
 ENV PORT 8080
 
