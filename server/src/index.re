@@ -19,9 +19,7 @@ let onConnect = (ws: Socket.t) => {
   };
   let onClose = () => Store.update(Store.ClientDisconnected(ws));
   Socket.onMessage(ws, onMessage);
-  Socket.onClose(ws, onClose);
-  /* Welcome clients with some hello world */
-  Socket.send(ws, "hello world")
+  Socket.onClose(ws, onClose)
 };
 
 /* Start server */

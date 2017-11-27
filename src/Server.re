@@ -12,7 +12,15 @@ let buildRelativeURL = (path) => {
   protocol ++ locationHost ++ path
 };
 
-let serverUrl = buildRelativeURL("/ws");
+/* Retrieve server URL from env or default to /ws */
+let envServerURL: string = [%bs.raw {| process.env.REACT_APP_SERVER_URL || '' |}];
+
+let serverUrl =
+  if (envServerURL != "") {
+    envServerURL
+  } else {
+    buildRelativeURL("/ws")
+  };
 
 let connect = (onConnect: t => unit, onEvent: event => unit) => {
   let ws = WebSocket.create_ws(serverUrl);

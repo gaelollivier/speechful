@@ -1,49 +1,54 @@
 open Utils;
 
-type state = {server: option(Server.t)};
+type state = {
+  server: option(Server.t),
+  messageHandler: option((string => unit))
+};
 
 type action =
   | ConnectionOpened(Server.t)
-  | MessageReceived(string);
+  | ServerEvent(Server.event)
+  | SetMessageHandler(string => unit);
 
 let component = ReasonReact.reducerComponent("App");
 
 let make = (_children) => {
   ...component,
-  initialState: () => {server: None},
+  initialState: () => {server: None, messageHandler: None},
   didMount: (self) => {
     let onConnect = (server) => self.reduce(() => ConnectionOpened(server), ());
-    let onEvent = (event) =>
-      switch event {
-      | Server.MessageReceived(msg) =>
-        self.reduce(() => MessageReceived(msg), ());
-        ()
-      };
+    let onEvent = self.reduce((event) => ServerEvent(event));
     Server.connect(onConnect, onEvent);
     ReasonReact.NoUpdate
   },
-  reducer: (action, _state) =>
+  reducer: (action, state) =>
     switch action {
-    | ConnectionOpened(server) =>
-      Server.sendMsg(server, "hello");
-      ReasonReact.Update({server: Some(server)})
-    | MessageReceived(msg) =>
-      ReasonReact.SideEffects(
-        (
-          (_self) => {
-            let ut = SpeechSynthesis.Utterance.create(msg);
-            Js.log(msg);
-            SpeechSynthesis.speak(ut)
-          }
+    | ConnectionOpened(server) => ReasonReact.Update({...state, server: Some(server)})
+    | SetMessageHandler(handler) => ReasonReact.Update({...state, messageHandler: Some(handler)})
+    | ServerEvent(e) =>
+      switch e {
+      | Server.MessageReceived(msg) =>
+        ReasonReact.SideEffects(
+          (
+            ({state}) =>
+              switch state.messageHandler {
+              | Some(handler) => handler(msg)
+              | None => ()
+              }
+          )
         )
-      )
+      }
     },
-  render: ({state}) =>
+  render: ({state, reduce}) =>
     <div className="App">
       (
         switch state.server {
-        | None => textEl("Hello world !")
-        | Some(_) => textEl("Connected !")
+        | None => textEl("Loading...")
+        | Some(server) =>
+          <Room
+            setMessageHandler=(reduce((handler) => SetMessageHandler(handler)))
+            say=((text) => Server.sendMsg(server, text))
+          />
         }
       )
     </div>
