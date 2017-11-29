@@ -10,15 +10,16 @@ let port =
 /* called whenever a client connects */
 let onConnect = (ws: Socket.t) => {
   Store.update(Store.NewClient(ws));
-  /* called when a message is received from a client */
-  let onMessage = (message: Message.t) => {
-    let txt = Message.data(message);
-    Js.log2("new message", txt);
-    Store.update(Store.NewMessage(ws, txt));
-    ()
+  let clientId = Socket.getId(ws);
+  /* called when an event is received from a client */
+  let onEvent = (event: Event.t) => {
+    Js.log2("new event", event);
+    switch event {
+    | Event.SetUsername(newName) => Store.update(Store.SetUsername(clientId, newName))
+    }
   };
-  let onClose = () => Store.update(Store.ClientDisconnected(ws));
-  Socket.onMessage(ws, onMessage);
+  let onClose = () => Store.update(Store.ClientDisconnected(clientId));
+  Socket.onEvent(ws, onEvent);
   Socket.onClose(ws, onClose)
 };
 

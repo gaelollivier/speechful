@@ -1,7 +1,7 @@
 {
   "name": "server",
   "sources": ["src"],
-  "bs-dependencies": [],
+  "bs-dependencies": ["bs-json"],
   "bsc-flags": ["-bs-super-errors"],
   "refmt": 3
 }
