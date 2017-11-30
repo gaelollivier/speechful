@@ -7,14 +7,15 @@ module Message = {
   [@bs.get] external data : t => string = "";
 };
 
+/* incoming messages */
 module Event = {
   type t =
     | SetUsername(string);
-  /* Decode function for individual message types */
+  /* decode function for individual message types */
   let decodeSetUsername = (jsonMsg) =>
     SetUsername(Json.Decode.(field("username", string, jsonMsg)));
   exception InvalidType(string);
-  /* Decode function for incoming message */
+  /* decode function for incoming message */
   let decode = (m: Message.t) =>
     m
     |> Message.data
@@ -30,6 +31,32 @@ module Event = {
     );
 };
 
+/* outgoing messages */
+module SocketMessage = {
+  type t =
+    | UsernameSet(option(string));
+  /* decode function for individual message types */
+  let encodeUsernameSet = (res) =>
+    Json.Encode.(
+      object_([
+        ("type", string("username_set")),
+        (
+          "error",
+          switch res {
+          | Some(err) => string(err)
+          | None => null
+          }
+        )
+      ])
+    )
+    |> Js.Json.stringify;
+  /* decode function for outgoing message */
+  let encodeJSON = (msg: t) =>
+    switch msg {
+    | UsernameSet(res) => encodeUsernameSet(res)
+    };
+};
+
 module Socket = {
   type t;
   type id = string;
@@ -39,12 +66,12 @@ module Socket = {
   /* id retrieves the unique id of the socket, so we can store it
      easily in a set */
   [@bs.get] external getId : t => id = "id";
-  [@bs.send] external sendUnsafe : (t, 'a) => unit = "send";
+  [@bs.send] external sendUnsafe : (t, string) => unit = "send";
   /* "dirty" safe send: check socket status
    * so we don't write to a closed socket */
-  let send = (socket: t, message: 'a) : unit =>
+  let send = (socket: t, message: SocketMessage.t) : unit =>
     if (readyState(socket) == stateOpen) {
-      sendUnsafe(socket, message)
+      sendUnsafe(socket, SocketMessage.encodeJSON(message))
     } else {
       Js.log("[ERROR] writting to closed socket")
     };

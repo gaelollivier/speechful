@@ -1,10 +1,9 @@
 open WsServer;
 
 /*
- * Would be cool to have something like redux-loop for state management
- * This is an attempt to have a redux-like state management, so we avoid mutations.
- * For now, reduce can produce side-effects... would be better to return them instead
- * (but I don't plan to write unit tests for now anyway so... ¯\_(ツ)_/¯)
+ * This file implements an "home-made" state management system,
+ * closely inspired from ReasonReact ReducerComponent
+ * (but without the "generic" part)
  */
 type client = {
   ws: Socket.t,
@@ -14,19 +13,28 @@ type client = {
 
 let make_client = (ws: Socket.t) => {ws, id: Socket.getId(ws), username: None};
 
-type t = {clients: list(client)};
+type state = {clients: list(client)};
 
-let currentState: ref(t) = ref({clients: []});
+let get_client = (state: state, id: Socket.id) => List.find((c) => c.id == id, state.clients);
+
+let currentState: ref(state) = ref({clients: []});
 
 type action =
   | NewClient(Socket.t)
   | ClientDisconnected(Socket.id)
   | SetUsername(Socket.id, string);
 
-let reduce = (state: t, action: action) : t =>
+type update =
+  | NoUpdate
+  | SideEffect(state => unit)
+  | Update(state)
+  | UpdateWithSideEffect(state, state => unit);
+
+let reduce = (state: state, action: action) : update =>
   switch action {
-  | NewClient(c) => {clients: [make_client(c), ...state.clients]}
-  | ClientDisconnected(clientId) => {clients: List.filter((c) => c.id !== clientId, state.clients)}
+  | NewClient(c) => Update({clients: [make_client(c), ...state.clients]})
+  | ClientDisconnected(clientId) =>
+    Update({clients: List.filter((c) => c.id !== clientId, state.clients)})
   /* | NewMessage(client, message) =>
      /* Broadcast to all connected clients */
      List.iter(
@@ -37,10 +45,15 @@ let reduce = (state: t, action: action) : t =>
        state.clients
      );
      state */
-  | SetUsername(clientId, username) => {
-      clients:
-        List.map((c) => c.id != clientId ? c : {...c, username: Some(username)}, state.clients)
-    }
+  | SetUsername(clientId, username) =>
+    let client = get_client(state, clientId);
+    UpdateWithSideEffect(
+      {
+        clients:
+          List.map((c) => c.id != clientId ? c : {...c, username: Some(username)}, state.clients)
+      },
+      ((_) => Socket.send(client.ws, UsernameSet(None)))
+    )
   };
 
 let debug = () => {
@@ -50,7 +63,14 @@ let debug = () => {
 
 let update = (a: action) => {
   Js.log2("new action:", a);
-  currentState := reduce(currentState^, a);
+  switch (reduce(currentState^, a)) {
+  | NoUpdate => ()
+  | SideEffect(fn) => fn(currentState^)
+  | Update(newState) => currentState := newState
+  | UpdateWithSideEffect(newState, fn) =>
+    currentState := newState;
+    fn(currentState^)
+  };
   Js.log("new state:");
   debug()
 };
