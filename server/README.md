@@ -34,3 +34,65 @@ Sent by server to notify status of "set_username"
   "error": "[ERROR MESSAGE]" | null
 }
 ```
+
+#### Join room
+
+Sent by client to join a room.
+
+* One client can only be in one room at a time
+* If the room doesn't exist yet, it's created
+
+```js
+{
+  "type": "join_room",
+  "room": "[ROOM NAME]"
+}
+```
+
+#### Room joined
+
+Sent by server when client successfuly joined a room. Contains the list of users already in the
+room.
+
+```js
+{
+  "type": "room_joined",
+  "users": [
+    {
+      "id": "[USER ID]",
+      "username": "[USER NAME]" | null
+    },
+    ...
+  ]
+}
+```
+
+#### User joined
+
+Sent by server when a new client joins the room the user is currently in.
+
+```js
+{
+  "type": "new_user_joined",
+  "room": "[ROOM NAME]",
+  "user": {
+    "id": "[USER ID]",
+    "username": "[USER NAME]" | null
+  }
+}
+```
+
+#### User left
+
+Sent by server when a new client leaves the room the user is currently in.
+
+```js
+{
+  "type": "user_left",
+  "room": "[ROOM NAME]",
+  "user": {
+    "id": "[USER ID]",
+    "username": "[USER NAME]" | null
+  }
+}
+```
