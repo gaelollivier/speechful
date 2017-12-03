@@ -90,9 +90,6 @@ Sent by server when a new client leaves the room the user is currently in.
 {
   "type": "user_left",
   "room": "[ROOM NAME]",
-  "user": {
-    "id": "[USER ID]",
-    "username": "[USER NAME]" | null
-  }
+  "user_id": "[USER ID]"
 }
 ```

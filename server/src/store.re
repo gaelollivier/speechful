@@ -5,16 +5,7 @@ open WsServer;
  * closely inspired from ReasonReact ReducerComponent
  * (but without the "generic" part)
  */
-type state = {
-  clients: list(Client.t),
-  rooms: list(string)
-};
-
-let get_client = (state: state, id: Socket.id) =>
-  List.find((c: Client.t) => c.id == id, state.clients);
-
-let currentState: ref(state) = ref({clients: [], rooms: []});
-
+/* Actions */
 type action =
   | NewClient(Socket.t)
   | ClientDisconnected(Socket.id)
@@ -23,28 +14,16 @@ type action =
 
 type update =
   | NoUpdate
-  | SideEffect(state => unit)
-  | Update(state)
-  | UpdateWithSideEffect(state, state => unit);
+  | SideEffect(State.t => unit)
+  | Update(State.t)
+  | UpdateWithSideEffect(State.t, State.t => unit);
 
-let reduce = (state: state, action: action) : update =>
+/* Reducer */
+let reduce = (state: State.t, action: action) : update =>
   switch action {
   | NewClient(c) => Update({...state, clients: [Client.make(c), ...state.clients]})
-  | ClientDisconnected(clientId) =>
-    /* TODO: Remove client from room */
-    Update({...state, clients: List.filter((c: Client.t) => c.id !== clientId, state.clients)})
-  /* | NewMessage(client, message) =>
-     /* Broadcast to all connected clients */
-     List.iter(
-       (c) =>
-         if (c !== client) {
-           Socket.send(c, message)
-         },
-       state.clients
-     );
-     state */
   | SetUsername(clientId, username) =>
-    let client = get_client(state, clientId);
+    let client = State.get_client(state, clientId);
     UpdateWithSideEffect(
       {
         ...state,
@@ -57,24 +36,59 @@ let reduce = (state: state, action: action) : update =>
       /* TODO: broadcast username to users in room */
       ((_) => Socket.send(client.ws, Message.encodeJSON(UsernameSet(None))))
     )
+  | ClientDisconnected(clientId) =>
+    let client = State.get_client(state, clientId);
+    let (newRooms, effects) =
+      switch client.room {
+      | Some(room) => Room.removeClient(state, clientId, room)
+      | None => (state.rooms, [])
+      };
+    UpdateWithSideEffect(
+      {clients: List.filter((c: Client.t) => c.id !== clientId, state.clients), rooms: newRooms},
+      ((state) => List.iter((f) => f(state), effects))
+    )
   | JoinRoom(clientId, room) =>
-    let client = get_client(state, clientId);
-    /* TODO: remove client from its current room */
-    /* update client room */
-    let newClients =
-      List.map((c: Client.t) => c.id != clientId ? c : {...c, room: Some(room)}, state.clients);
-    let roomExists = List.exists((r) => r == room, state.rooms);
-    if (roomExists) {
-      /* room exist: need to send list of existing users + broadcast new user */
-      NoUpdate
-    } else {
-      /* new room */
+    let client = State.get_client(state, clientId);
+    switch client.room {
+    /* client didn't change room: do nothing */
+    | Some(prevRoom) when prevRoom == room => NoUpdate
+    | _ =>
+      /* remove client from its current room */
+      let (newRooms, effects) =
+        switch client.room {
+        | Some(prevRoom) => Room.removeClient(state, clientId, prevRoom)
+        | _ => (state.rooms, [])
+        };
+      /* update client room */
+      let newClients =
+        List.map((c: Client.t) => c.id != clientId ? c : {...c, room: Some(room)}, state.clients);
+      let clientsInRoom = State.clientsInRoom(state, room);
+      let effects = [
+        /* send list of users already in room */
+        ((_) => Socket.send(client.ws, Message.encodeJSON(RoomJoined(room, clientsInRoom)))),
+        /* broadcast new user to users already in room */
+        (
+          (_) =>
+            List.iter(
+              (c: Client.t) => Socket.send(c.ws, Message.encodeJSON(UserJoined(clientId, room))),
+              clientsInRoom
+            )
+        ),
+        ...effects
+      ];
       UpdateWithSideEffect(
-        {clients: newClients, rooms: [room, ...state.rooms]},
-        ((_) => Socket.send(client.ws, Message.encodeJSON(RoomJoined(room, []))))
+        {
+          clients: newClients,
+          /* append new room to rooms list if it doesn't exist already */
+          rooms: List.exists((r) => r == room, newRooms) ? newRooms : [room, ...newRooms]
+        },
+        ((state) => List.iter((f) => f(state), effects))
       )
     }
   };
+
+/* Store  */
+let currentState: ref(State.t) = ref(State.{clients: [], rooms: []});
 
 let debug = () => {
   Js.log("clients:");
