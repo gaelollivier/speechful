@@ -24,17 +24,6 @@ Sent by client to set its name
 }
 ```
 
-#### Set username response
-
-Sent by server to notify status of "set_username"
-
-```js
-{
-  "type": "username_set",
-  "error": "[ERROR MESSAGE]" | null
-}
-```
-
 #### Join room
 
 Sent by client to join a room.
@@ -91,5 +80,42 @@ Sent by server when a new client leaves the room the user is currently in.
   "type": "user_left",
   "room": "[ROOM NAME]",
   "user_id": "[USER ID]"
+}
+```
+
+#### User changed username
+
+Sent by server when a user in the same room changed his username.
+
+```js
+{
+  "type": "username_changed",
+  "user": {
+    "id": "[USER ID]",
+    "username": "[USER NAME]" | null
+  }
+}
+```
+
+#### Send message to room
+
+Sent by client to set send a message to all users in current room.
+
+```js
+{
+  "type": "send_message",
+  "message": "[USER MESSAGE]"
+}
+```
+
+#### Sent message
+
+Sent by server when a user in the same room send a message.
+
+```js
+{
+  "type": "message_sent",
+  "user_id": "[USER ID]",
+  "message": "[USER MESSAGE]"
 }
 ```

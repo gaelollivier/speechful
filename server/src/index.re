@@ -18,6 +18,7 @@ let onConnect = (ws: Socket.t) => {
     switch event {
     | Event.SetUsername(newName) => Store.update(Store.SetUsername(clientId, newName))
     | Event.JoinRoom(room) => Store.update(Store.JoinRoom(clientId, room))
+    | Event.SendMessage(message) => Store.update(Store.SendMessage(clientId, message))
     }
   };
   let onClose = () => Store.update(Store.ClientDisconnected(clientId));

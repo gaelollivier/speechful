@@ -10,7 +10,8 @@ type action =
   | NewClient(Socket.t)
   | ClientDisconnected(Socket.id)
   | SetUsername(Socket.id, string)
-  | JoinRoom(Socket.id, string);
+  | JoinRoom(Socket.id, string)
+  | SendMessage(Socket.id, string);
 
 type update =
   | NoUpdate
@@ -23,21 +24,33 @@ let reduce = (state: State.t, action: action) : update =>
   switch action {
   | NewClient(c) => Update({...state, clients: [Client.make(c), ...state.clients]})
   | SetUsername(clientId, username) =>
-    let client = State.get_client(state, clientId);
+    let client = State.getClient(state, clientId);
+    let newClient = Client.{...client, username: Some(username)};
     UpdateWithSideEffect(
       {
         ...state,
-        clients:
-          List.map(
-            (c: Client.t) => c.id != clientId ? c : {...c, username: Some(username)},
-            state.clients
-          )
+        clients: List.map((c: Client.t) => c.id != clientId ? c : newClient, state.clients)
       },
-      /* TODO: broadcast username to users in room */
-      ((_) => Socket.send(client.ws, Message.encodeJSON(UsernameSet(None))))
+      {
+        /* broadcast username to clients in room */
+        let effects =
+          switch newClient.room {
+          | Some(room) =>
+            let clientsInRoom = State.clientsInRoom(state, room);
+            List.map(
+              (c: Client.t, _) =>
+                Socket.send(c.ws, Message.encodeJSON(ChangedUsername(newClient))),
+              clientsInRoom
+            )
+          | None => [
+              ((_) => Socket.send(client.ws, Message.encodeJSON(ChangedUsername(newClient))))
+            ]
+          };
+        ((state) => List.iter((f) => f(state), effects))
+      }
     )
   | ClientDisconnected(clientId) =>
-    let client = State.get_client(state, clientId);
+    let client = State.getClient(state, clientId);
     let (newRooms, effects) =
       switch client.room {
       | Some(room) => Room.removeClient(state, clientId, room)
@@ -48,7 +61,7 @@ let reduce = (state: State.t, action: action) : update =>
       ((state) => List.iter((f) => f(state), effects))
     )
   | JoinRoom(clientId, room) =>
-    let client = State.get_client(state, clientId);
+    let client = State.getClient(state, clientId);
     switch client.room {
     /* client didn't change room: do nothing */
     | Some(prevRoom) when prevRoom == room => NoUpdate
@@ -70,7 +83,7 @@ let reduce = (state: State.t, action: action) : update =>
         (
           (_) =>
             List.iter(
-              (c: Client.t) => Socket.send(c.ws, Message.encodeJSON(UserJoined(clientId, room))),
+              (c: Client.t) => Socket.send(c.ws, Message.encodeJSON(UserJoined(client, room))),
               clientsInRoom
             )
         ),
@@ -84,6 +97,21 @@ let reduce = (state: State.t, action: action) : update =>
         },
         ((state) => List.iter((f) => f(state), effects))
       )
+    }
+  | SendMessage(clientId, message) =>
+    let client = State.getClient(state, clientId);
+    switch client.room {
+    | Some(room) =>
+      let clientsInRoom = State.clientsInRoom(state, room);
+      let effects =
+        List.map(
+          (c: Client.t, _) =>
+            Socket.send(c.ws, Message.encodeJSON(MessageSent(clientId, message))),
+          clientsInRoom
+        );
+      SideEffect(((state) => List.iter((f) => f(state), effects)))
+    /* Nobody in room: do nothing */
+    | None => NoUpdate
     }
   };
 
