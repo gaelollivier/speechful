@@ -18,6 +18,9 @@ const create_server = (port, onConnect) => {
     // so we can store them easily in a set
     ws.id = uuidv4();
     onConnect(ws);
+    ws.on('error', error => {
+      console.error(`WS error for client '${ws.id}':`, error);
+    });
   });
 
   // Serve webapp
@@ -30,6 +33,10 @@ const create_server = (port, onConnect) => {
 
   app.listen(port, () => {
     console.log(`Server listenning on ${port}`);
+  });
+
+  app.on('error', error => {
+    console.error('WS Server error:', error);
   });
 };
 

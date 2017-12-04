@@ -1,31 +1,47 @@
 type state = {userText: string};
 
 type action =
-  | MessageReceived(string)
+  | EventReceived(Event.t)
   | UserTextChanged(string)
   | Say(string);
 
 let component = ReasonReact.reducerComponent("Room");
 
-let make = (~setMessageHandler, ~say, _children) => {
+let make = (~setMessageHandler, ~sendMessage, ~user: User.t, _children) => {
   ...component,
   initialState: () => {userText: ""},
   didMount: (_self) =>
     /* set message handler */
-    ReasonReact.SideEffects(({reduce}) => setMessageHandler(reduce((msg) => MessageReceived(msg)))),
+    ReasonReact.SideEffects(
+      ({reduce}) => {
+        setMessageHandler(reduce((e) => EventReceived(e)));
+        /* set username */
+        sendMessage(Message.SetUsername("bob"));
+        /* join default room */
+        sendMessage(Message.JoinRoom("living-room"))
+      }
+    ),
   reducer: (action, _state) =>
     switch action {
-    | MessageReceived(txt) =>
-      ReasonReact.SideEffects(
-        (
-          /* Say incoming message ! */
-          (_self) => {
-            Js.log2("anonymous:", txt);
-            let ut = SpeechSynthesis.Utterance.create(txt);
-            SpeechSynthesis.speak(ut)
-          }
+    | EventReceived(event) =>
+      Js.log2("message received:", event);
+      switch event {
+      | Moien(userId) =>
+        Js.log2("user id", userId);
+        ReasonReact.NoUpdate
+      | MessageSent(userId, txt) when userId != user.id =>
+        ReasonReact.SideEffects(
+          (
+            /* Say incoming message ! */
+            (_self) => {
+              Js.log2("anonymous:", txt);
+              let ut = SpeechSynthesis.Utterance.create(txt);
+              SpeechSynthesis.speak(ut)
+            }
+          )
         )
-      )
+      | _ => ReasonReact.NoUpdate
+      }
     | UserTextChanged(txt) => ReasonReact.Update({userText: txt})
     | Say(txt) =>
       ReasonReact.UpdateWithSideEffects
@@ -36,7 +52,7 @@ let make = (~setMessageHandler, ~say, _children) => {
           (
             (_self) => {
               Js.log2("me:", txt);
-              say(txt)
+              sendMessage(Message.SendMessage(txt))
             }
           )
         )

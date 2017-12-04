@@ -23,7 +23,9 @@ let onConnect = (ws: Socket.t) => {
   };
   let onClose = () => Store.update(Store.ClientDisconnected(clientId));
   Socket.onMessage(ws, onMessage);
-  Socket.onClose(ws, onClose)
+  Socket.onClose(ws, onClose);
+  /* Say hello to client and give him his user_id */
+  Socket.send(ws, Message.encodeJSON(Moien(clientId)))
 };
 
 /* Start server */

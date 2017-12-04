@@ -2,13 +2,17 @@ open WsServer;
 
 /* outgoing messages */
 type t =
+  | Moien(Socket.id)
   | RoomJoined(string, list(Client.t))
   | UserLeft(Socket.id, string)
   | UserJoined(Client.t, string)
   | ChangedUsername(Client.t)
   | MessageSent(Socket.id, string);
 
-/* encode functions for common types */
+let encodeMoien = (userId: Socket.id) =>
+  Json.Encode.(object_([("type", string("moien")), ("user_id", string(userId))]))
+  |> Js.Json.stringify;
+
 let encodeClient = (client: Client.t) =>
   Json.Encode.(
     object_([
@@ -74,6 +78,7 @@ let encodeMessageSent = (clientId: Socket.id, message: string) =>
 /* encode function for outgoing message */
 let encodeJSON = (msg: t) =>
   switch msg {
+  | Moien(userId) => encodeMoien(userId)
   | RoomJoined(room, clients) => encodeRoomJoined(room, clients)
   | UserLeft(clientId, room) => encodeRoomUserLeft(clientId, room)
   | UserJoined(client, room) => encodeRoomUserJoined(client, room)

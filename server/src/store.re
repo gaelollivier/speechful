@@ -126,7 +126,7 @@ let debug = () => {
 };
 
 let update = (a: action) => {
-  Js.log2("new action:", a);
+  Js.log("new action");
   switch (reduce(currentState^, a)) {
   | NoUpdate => ()
   | SideEffect(fn) => fn(currentState^)

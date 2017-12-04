@@ -2,19 +2,20 @@ open Utils;
 
 type state = {
   server: option(Server.t),
-  messageHandler: option((string => unit))
+  messageHandler: option((Event.t => unit)),
+  user: option(User.t)
 };
 
 type action =
   | ConnectionOpened(Server.t)
   | ServerEvent(Server.event)
-  | SetMessageHandler(string => unit);
+  | SetMessageHandler(Event.t => unit);
 
 let component = ReasonReact.reducerComponent("App");
 
 let make = (_children) => {
   ...component,
-  initialState: () => {server: None, messageHandler: None},
+  initialState: () => {server: None, messageHandler: None, user: None},
   didMount: (self) => {
     let onConnect = (server) => self.reduce(() => ConnectionOpened(server), ());
     let onEvent = self.reduce((event) => ServerEvent(event));
@@ -28,27 +29,36 @@ let make = (_children) => {
     | ServerEvent(e) =>
       switch e {
       | Server.MessageReceived(msg) =>
-        ReasonReact.SideEffects(
-          (
-            ({state}) =>
-              switch state.messageHandler {
-              | Some(handler) => handler(msg)
-              | None => ()
-              }
+        switch (Event.decode(msg)) {
+        | exception e =>
+          Js.log2("cannot decode incoming message:", e);
+          ReasonReact.NoUpdate
+        | Moien(userId) =>
+          ReasonReact.Update({...state, user: Some(User.{id: userId, username: None})})
+        | event =>
+          ReasonReact.SideEffects(
+            (
+              ({state}) =>
+                switch state.messageHandler {
+                | Some(handler) => handler(event)
+                | None => ()
+                }
+            )
           )
-        )
+        }
       }
     },
   render: ({state, reduce}) =>
     <div className="App">
       (
-        switch state.server {
-        | None => textEl("Loading...")
-        | Some(server) =>
+        switch (state.server, state.user) {
+        | (Some(server), Some(user)) =>
           <Room
             setMessageHandler=(reduce((handler) => SetMessageHandler(handler)))
-            say=((text) => Server.sendMsg(server, text))
+            sendMessage=((msg) => Server.sendMsg(server, Message.encodeJSON(msg)))
+            user
           />
+        | _ => textEl("Loading...")
         }
       )
     </div>

@@ -13,6 +13,17 @@ Speechful server is a websocket server with a basic JSON-based protocol. Base sh
 
 ### Messages types
 
+#### Moien!
+
+Sent by server to incoming clients (allows client to know its user ID).
+
+```js
+{
+  "type": "moien",
+  "user_id": "[USER ID]"
+}
+```
+
 #### Set username
 
 Sent by client to set its name
@@ -62,7 +73,7 @@ Sent by server when a new client joins the room the user is currently in.
 
 ```js
 {
-  "type": "new_user_joined",
+  "type": "user_joined",
   "room": "[ROOM NAME]",
   "user": {
     "id": "[USER ID]",
