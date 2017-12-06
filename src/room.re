@@ -7,7 +7,7 @@ type action =
 
 let component = ReasonReact.reducerComponent("Room");
 
-let make = (~setMessageHandler, ~sendMessage, ~user: User.t, _children) => {
+let make = (~setMessageHandler, ~sendMessage, ~user: User.t, ~room: string, _children) => {
   ...component,
   initialState: () => {userText: ""},
   didMount: (_self) =>
@@ -17,8 +17,8 @@ let make = (~setMessageHandler, ~sendMessage, ~user: User.t, _children) => {
         setMessageHandler(reduce((e) => EventReceived(e)));
         /* set username */
         sendMessage(Message.SetUsername("bob"));
-        /* join default room */
-        sendMessage(Message.JoinRoom("living-room"))
+        /* join room */
+        sendMessage(Message.JoinRoom(room))
       }
     ),
   reducer: (action, _state) =>

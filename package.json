@@ -2,6 +2,7 @@
   "name": "speechful",
   "version": "0.1.0",
   "dependencies": {
+    "bs-director": "^0.0.5",
     "bs-json": "^0.2.4",
     "react": "^16.0.0",
     "react-dom": "^16.0.0",

@@ -13,7 +13,7 @@ type action =
 
 let component = ReasonReact.reducerComponent("App");
 
-let make = (_children) => {
+let make = (~room: option(string)=?, _children) => {
   ...component,
   initialState: () => {server: None, messageHandler: None, user: None},
   didMount: (self) => {
@@ -53,11 +53,16 @@ let make = (_children) => {
       (
         switch (state.server, state.user) {
         | (Some(server), Some(user)) =>
-          <Room
-            setMessageHandler=(reduce((handler) => SetMessageHandler(handler)))
-            sendMessage=((msg) => Server.sendMsg(server, Message.encodeJSON(msg)))
-            user
-          />
+          switch room {
+          | Some(room) =>
+            <Room
+              setMessageHandler=(reduce((handler) => SetMessageHandler(handler)))
+              sendMessage=((msg) => Server.sendMsg(server, Message.encodeJSON(msg)))
+              user
+              room
+            />
+          | None => textEl("Select a room")
+          }
         | _ => textEl("Loading...")
         }
       )
