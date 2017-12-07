@@ -1,4 +1,9 @@
-type state = {userText: string};
+open Utils;
+
+type state = {
+  userText: string,
+  users: list(User.t)
+};
 
 type action =
   | EventReceived(Event.t)
@@ -17,7 +22,7 @@ let make =
       _children
     ) => {
   ...component,
-  initialState: () => {userText: ""},
+  initialState: () => {userText: "", users: []},
   didMount: (_self) =>
     /* set message handler */
     ReasonReact.SideEffects(
@@ -32,14 +37,24 @@ let make =
         sendMessage(Message.JoinRoom(room))
       }
     ),
-  reducer: (action, _state) =>
+  reducer: (action, state) =>
     switch action {
     | EventReceived(event) =>
       Js.log2("message received:", event);
       switch event {
-      | Moien(userId) =>
-        Js.log2("user id", userId);
-        ReasonReact.NoUpdate
+      | Moien(_) => ReasonReact.NoUpdate
+      | RoomJoined(_room, users) => ReasonReact.Update({...state, users})
+      | UserJoined(user, _room) => ReasonReact.Update({...state, users: [user, ...state.users]})
+      | UserLeft(userId, _room) =>
+        ReasonReact.Update({
+          ...state,
+          users: List.filter((user: User.t) => user.id != userId, state.users)
+        })
+      | ChangedUsername(newUser) =>
+        ReasonReact.Update({
+          ...state,
+          users: List.map((user: User.t) => user.id != newUser.id ? user : newUser, state.users)
+        })
       | MessageSent(senderId, txt) when senderId != userId =>
         ReasonReact.SideEffects(
           (
@@ -51,14 +66,14 @@ let make =
             }
           )
         )
-      | _ => ReasonReact.NoUpdate
+      | MessageSent(_, _) => ReasonReact.NoUpdate
       }
-    | UserTextChanged(txt) => ReasonReact.Update({userText: txt})
+    | UserTextChanged(txt) => ReasonReact.Update({...state, userText: txt})
     | Say(txt) =>
       ReasonReact.UpdateWithSideEffects
         /* Reset text input */
         (
-          {userText: ""},
+          {...state, userText: ""},
           /* Send message */
           (
             (_self) => {
@@ -79,6 +94,24 @@ let make =
             }
           )
         )>
+        <ul>
+          (
+            List.map(
+              (user: User.t) =>
+                <li key=user.id>
+                  (
+                    switch user.username {
+                    | None => textEl("Anonymous")
+                    | Some(username) => textEl(username)
+                    }
+                  )
+                </li>,
+              state.users
+            )
+            |> Array.of_list
+            |> ReasonReact.arrayToElement
+          )
+        </ul>
         <Input
           value=state.userText
           onChange=(reduce((v) => UserTextChanged(v)))
