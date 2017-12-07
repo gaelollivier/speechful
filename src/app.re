@@ -1,9 +1,14 @@
 open Utils;
 
+type username =
+  | NotSet
+  | Set(option(string));
+
 type state = {
   server: option(Server.t),
   messageHandler: option((Event.t => unit)),
-  user: option(User.t)
+  userId: option(User.id),
+  username
 };
 
 type action =
@@ -15,7 +20,16 @@ let component = ReasonReact.reducerComponent("App");
 
 let make = (~room: option(string)=?, _children) => {
   ...component,
-  initialState: () => {server: None, messageHandler: None, user: None},
+  initialState: () => {
+    /* check if user has already set its username */
+    let username =
+      switch (LocalStorage.getItem("username")) {
+      | None => NotSet
+      | Some(username) when username == "" => Set(None)
+      | Some(username) => Set(Some(username))
+      };
+    {server: None, messageHandler: None, userId: None, username}
+  },
   didMount: (self) => {
     let onConnect = (server) => self.reduce(() => ConnectionOpened(server), ());
     let onEvent = self.reduce((event) => ServerEvent(event));
@@ -33,8 +47,7 @@ let make = (~room: option(string)=?, _children) => {
         | exception e =>
           Js.log2("cannot decode incoming message:", e);
           ReasonReact.NoUpdate
-        | Moien(userId) =>
-          ReasonReact.Update({...state, user: Some(User.{id: userId, username: None})})
+        | Moien(userId) => ReasonReact.Update({...state, userId: Some(userId)})
         | event =>
           ReasonReact.SideEffects(
             (
@@ -51,19 +64,27 @@ let make = (~room: option(string)=?, _children) => {
   render: ({state, reduce}) =>
     <div className="App">
       (
-        switch (state.server, state.user) {
-        | (Some(server), Some(user)) =>
-          switch room {
-          | Some(room) =>
-            <Room
-              setMessageHandler=(reduce((handler) => SetMessageHandler(handler)))
-              sendMessage=((msg) => Server.sendMsg(server, Message.encodeJSON(msg)))
-              user
-              room
-            />
-          | None => textEl("Select a room")
+        switch room {
+        | None => textEl("To enter a room, simply enter its url. Ex: '/my-room'")
+        | Some(room) =>
+          switch state.username {
+          | NotSet => <UsernameSelector />
+          | Set(username) =>
+            switch (state.server, state.userId) {
+            | (Some(server), Some(userId)) =>
+              <div>
+                <UsernameStatus username />
+                <Room
+                  setMessageHandler=(reduce((handler) => SetMessageHandler(handler)))
+                  sendMessage=((msg) => Server.sendMsg(server, Message.encodeJSON(msg)))
+                  room
+                  username
+                  userId
+                />
+              </div>
+            | _ => textEl("Loading...")
+            }
           }
-        | _ => textEl("Loading...")
         }
       )
     </div>

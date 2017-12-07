@@ -7,7 +7,15 @@ type action =
 
 let component = ReasonReact.reducerComponent("Room");
 
-let make = (~setMessageHandler, ~sendMessage, ~user: User.t, ~room: string, _children) => {
+let make =
+    (
+      ~setMessageHandler,
+      ~sendMessage,
+      ~room: string,
+      ~username: option(string),
+      ~userId: User.id,
+      _children
+    ) => {
   ...component,
   initialState: () => {userText: ""},
   didMount: (_self) =>
@@ -16,7 +24,10 @@ let make = (~setMessageHandler, ~sendMessage, ~user: User.t, ~room: string, _chi
       ({reduce}) => {
         setMessageHandler(reduce((e) => EventReceived(e)));
         /* set username */
-        sendMessage(Message.SetUsername("bob"));
+        switch username {
+        | Some(username) => sendMessage(Message.SetUsername(username))
+        | None => ()
+        };
         /* join room */
         sendMessage(Message.JoinRoom(room))
       }
@@ -29,7 +40,7 @@ let make = (~setMessageHandler, ~sendMessage, ~user: User.t, ~room: string, _chi
       | Moien(userId) =>
         Js.log2("user id", userId);
         ReasonReact.NoUpdate
-      | MessageSent(userId, txt) when userId != user.id =>
+      | MessageSent(senderId, txt) when senderId != userId =>
         ReasonReact.SideEffects(
           (
             /* Say incoming message ! */
