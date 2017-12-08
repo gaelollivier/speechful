@@ -10,7 +10,7 @@ type t =
 /* shared decode functions */
 let decodeUser = (json) =>
   Json.Decode.(
-    User.{id: field("id", string, json), username: optional(field("username", string), json)}
+    User.{id: field("id", string, json), name: optional(field("username", string), json)}
   );
 
 /* decode functions for individual message types */

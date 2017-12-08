@@ -5,3 +5,9 @@
 [@bs.val] external requireAssetURI : string => string = "require";
 
 let textEl = (str) => ReasonReact.stringToElement(str);
+
+let default = (defaultVal: 'a, opt: option('a)) =>
+  switch opt {
+  | Some(a) => a
+  | None => defaultVal
+  };

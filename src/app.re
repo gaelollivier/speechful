@@ -78,8 +78,7 @@ let make = (~room: option(string)=?, _children) => {
                   setMessageHandler=(reduce((handler) => SetMessageHandler(handler)))
                   sendMessage=((msg) => Server.sendMsg(server, Message.encodeJSON(msg)))
                   room
-                  username
-                  userId
+                  currentUser=User.{id: userId, name: username}
                 />
               </div>
             | _ => textEl("Loading...")

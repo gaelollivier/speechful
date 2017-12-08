@@ -12,24 +12,16 @@ type action =
 
 let component = ReasonReact.reducerComponent("Room");
 
-let make =
-    (
-      ~setMessageHandler,
-      ~sendMessage,
-      ~room: string,
-      ~username: option(string),
-      ~userId: User.id,
-      _children
-    ) => {
+let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.t, _children) => {
   ...component,
-  initialState: () => {userText: "", users: []},
+  initialState: () => {userText: "", users: [currentUser]},
   didMount: (_self) =>
     /* set message handler */
     ReasonReact.SideEffects(
       ({reduce}) => {
         setMessageHandler(reduce((e) => EventReceived(e)));
         /* set username */
-        switch username {
+        switch currentUser.name {
         | Some(username) => sendMessage(Message.SetUsername(username))
         | None => ()
         };
@@ -43,7 +35,7 @@ let make =
       Js.log2("message received:", event);
       switch event {
       | Moien(_) => ReasonReact.NoUpdate
-      | RoomJoined(_room, users) => ReasonReact.Update({...state, users})
+      | RoomJoined(_room, users) => ReasonReact.Update({...state, users: [currentUser, ...users]})
       | UserJoined(user, _room) => ReasonReact.Update({...state, users: [user, ...state.users]})
       | UserLeft(userId, _room) =>
         ReasonReact.Update({
@@ -55,7 +47,7 @@ let make =
           ...state,
           users: List.map((user: User.t) => user.id != newUser.id ? user : newUser, state.users)
         })
-      | MessageSent(senderId, txt) when senderId != userId =>
+      | MessageSent(senderId, txt) when senderId != currentUser.id =>
         ReasonReact.SideEffects(
           (
             /* Say incoming message ! */
@@ -96,18 +88,34 @@ let make =
         )>
         <ul>
           (
-            List.map(
-              (user: User.t) =>
-                <li key=user.id>
-                  (
-                    switch user.username {
-                    | None => textEl("Anonymous")
-                    | Some(username) => textEl(username)
-                    }
-                  )
-                </li>,
-              state.users
-            )
+            state.users
+            |> List.sort(
+                 (a: User.t, b: User.t) =>
+                   switch (a.name, b.name) {
+                   | (Some(a), Some(b)) => String.compare(a, b)
+                   | (Some(_), None) => (-1)
+                   | (None, Some(_)) => 1
+                   | (None, None) => 0
+                   }
+               )
+            |> List.map(
+                 (user: User.t) =>
+                   <li key=user.id>
+                     (
+                       switch user.name {
+                       | None => textEl("Anonymous")
+                       | Some(username) => textEl(username)
+                       }
+                     )
+                     (
+                       if (user.id == currentUser.id) {
+                         textEl(" (me)")
+                       } else {
+                         ReasonReact.nullElement
+                       }
+                     )
+                   </li>
+               )
             |> Array.of_list
             |> ReasonReact.arrayToElement
           )
