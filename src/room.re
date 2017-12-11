@@ -2,19 +2,21 @@ open Utils;
 
 type state = {
   userText: string,
-  users: list(User.t)
+  users: list(User.t),
+  speaking: option(User.id)
 };
 
 type action =
   | EventReceived(Event.t)
   | UserTextChanged(string)
-  | Say(string);
+  | Say(string)
+  | SpeechEnd;
 
 let component = ReasonReact.reducerComponent("Room");
 
 let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.t, _children) => {
   ...component,
-  initialState: () => {userText: "", users: [currentUser]},
+  initialState: () => {userText: "", users: [currentUser], speaking: None},
   didMount: (_self) =>
     /* set message handler */
     ReasonReact.SideEffects(
@@ -48,12 +50,16 @@ let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.
           users: List.map((user: User.t) => user.id != newUser.id ? user : newUser, state.users)
         })
       | MessageSent(senderId, txt) when senderId != currentUser.id =>
-        ReasonReact.SideEffects(
+        ReasonReact.UpdateWithSideEffects(
+          {...state, speaking: Some(senderId)},
           (
             /* Say incoming message ! */
-            (_self) => {
-              Js.log2("anonymous:", txt);
+            (self) => {
+              let user = List.find((u: User.t) => u.id == senderId, state.users);
+              let username = default("anonymous", user.name);
+              Js.log2(username ++ ":", txt);
               let ut = SpeechSynthesis.Utterance.create(txt);
+              SpeechSynthesis.Utterance.on_end(ut, self.reduce((_) => SpeechEnd));
               SpeechSynthesis.speak(ut)
             }
           )
@@ -74,6 +80,7 @@ let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.
             }
           )
         )
+    | SpeechEnd => ReasonReact.Update({...state, speaking: None})
     },
   render: ({state, reduce}) =>
     <div className="App">
@@ -101,19 +108,21 @@ let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.
             |> List.map(
                  (user: User.t) =>
                    <li key=user.id>
-                     (
-                       switch user.name {
-                       | None => textEl("Anonymous")
-                       | Some(username) => textEl(username)
+                     {
+                       let username = default("Anonymous", user.name);
+                       let me =
+                         if (user.id == currentUser.id) {
+                           " (me)"
+                         } else {
+                           ""
+                         };
+                       let username = username ++ me;
+                       switch state.speaking {
+                       | Some(id) when id == user.id => <strong> (textEl(username)) </strong>
+                       | Some(_)
+                       | None => textEl(username)
                        }
-                     )
-                     (
-                       if (user.id == currentUser.id) {
-                         textEl(" (me)")
-                       } else {
-                         ReasonReact.nullElement
-                       }
-                     )
+                     }
                    </li>
                )
             |> Array.of_list

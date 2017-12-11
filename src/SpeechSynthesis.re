@@ -5,6 +5,7 @@ module Voice = {
 module Utterance = {
   type t;
   [@bs.new] external create : string => t = "SpeechSynthesisUtterance";
+  /* properties */
   [@bs.get] external get_lang : t => string = "lang";
   [@bs.set] external set_lang : (t, string) => unit = "lang";
   [@bs.get] external get_pitch : t => float = "pitch";
@@ -17,6 +18,8 @@ module Utterance = {
   [@bs.set] external set_voice : (t, Voice.t) => unit = "voice";
   [@bs.get] external get_volume : t => float = "volume";
   [@bs.set] external set_volume : (t, float) => unit = "volume";
+  /* event handlers */
+  [@bs.set] external on_end : (t, unit => unit) => unit = "onend";
 };
 
 /* Methods on global `speechSynthesis` object */
