@@ -3,7 +3,7 @@ open Utils;
 type state = {
   userText: string,
   users: list(User.t),
-  speaking: option(User.id)
+  speaking: option((User.id, string))
 };
 
 type action =
@@ -51,7 +51,7 @@ let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.
         })
       | MessageSent(senderId, txt) when senderId != currentUser.id =>
         ReasonReact.UpdateWithSideEffects(
-          {...state, speaking: Some(senderId)},
+          {...state, speaking: Some((senderId, txt))},
           (
             /* Say incoming message ! */
             (self) => {
@@ -118,7 +118,7 @@ let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.
                          };
                        let username = username ++ me;
                        switch state.speaking {
-                       | Some(id) when id == user.id => <strong> (textEl(username)) </strong>
+                       | Some((id, _)) when id == user.id => <strong> (textEl(username)) </strong>
                        | Some(_)
                        | None => textEl(username)
                        }
@@ -131,5 +131,11 @@ let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.
         </ul>
         <MessageInput value=state.userText onChange=(reduce((v) => UserTextChanged(v))) />
       </form>
+      (
+        switch state.speaking {
+        | None => ReasonReact.nullElement
+        | Some((_userId, message)) => <MessagePlayer message />
+        }
+      )
     </div>
 };
