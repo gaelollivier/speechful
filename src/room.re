@@ -129,11 +129,7 @@ let make = (~setMessageHandler, ~sendMessage, ~room: string, ~currentUser: User.
             |> ReasonReact.arrayToElement
           )
         </ul>
-        <Input
-          value=state.userText
-          onChange=(reduce((v) => UserTextChanged(v)))
-          placeholder="Say something..."
-        />
+        <MessageInput value=state.userText onChange=(reduce((v) => UserTextChanged(v))) />
       </form>
     </div>
 };

@@ -11,3 +11,5 @@ let router =
 DirectorRe.configure(router, {"html5history": true});
 
 DirectorRe.init(router, "");
+
+Js.log(Array.of_list(EmojiUtils.splitString({j|Hey ! 😂😄 Awesome !|j})));
